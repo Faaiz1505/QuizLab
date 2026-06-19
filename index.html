@@ -525,3 +525,811 @@ font-size: 14px;
 
     <!-- confetti container -->
     <div id="confetti-wrap" aria-hidden="true"></div>
+
+    
+    <script>
+    /* Quiz App - fully functional with:
+   - sounds via WebAudio
+   - categories and question sets
+   - timer, progress, next logic
+   - highest score saved in localStorage per category
+   - celebration confetti + result animation
+   - clear inline comments for learning
+*/
+
+document.addEventListener("DOMContentLoaded", () => {
+  /* ---------------------------
+     Element references
+     --------------------------- */
+  const startBtn = document.getElementById("start-btn");
+  const categorySelect = document.getElementById("category");
+  const progressBar = document.getElementById("progress-bar");
+  const questionArea = document.getElementById("question-area");
+  const questionText = document.getElementById("question-text");
+  const optionsBox = document.getElementById("options");
+  const timerEl = document.getElementById("timer");
+  const nextBtn = document.getElementById("next-btn");
+  const scoreEl = document.getElementById("score");
+  const qcountEl = document.getElementById("qcount");
+  const resultBox = document.getElementById("result-box");
+  const scoreText = document.getElementById("score-text");
+  const percentText = document.getElementById("percent-text");
+  const bestText = document.getElementById("best-text");
+  const highscoreLabel = document.getElementById("highscore");
+  const retryBtn = document.getElementById("retry-btn");
+  const changeBtn = document.getElementById("change-btn");
+  const confettiWrap = document.getElementById("confetti-wrap");
+  const pickOption = document.getElementById("pick");
+
+  /* ---------------------------
+     Questions by category
+     Add/remove category objects here
+     --------------------------- */
+  const QUESTION_BANK = {
+  sta: [
+  {
+    question: "Statistics is best defined as the science of",
+    choices: [
+      "Guessing numerical values",
+      "Collecting, organizing, analyzing and interpreting data",
+      "Making assumptions",
+      "Solving algebraic equations",
+    ],
+    answer: "Collecting, organizing, analyzing and interpreting data",
+  },
+  {
+    question: "Which of the following is NOT a type of statistical data?",
+    choices: ["Qualitative", "Quantitative", "Continuous", "Hypothetical"],
+    answer: "Hypothetical",
+  },
+  {
+    question: "Data that describe qualities or attributes are called",
+    choices: [
+      "Quantitative data",
+      "Continuous data",
+      "Qualitative data",
+      "Discrete data",
+    ],
+    answer: "Qualitative data",
+  },
+  {
+    question: "Data that can take only whole number values are known as",
+    choices: ["Continuous data", "Qualitative data", "Discrete data", "Primary data"],
+    answer: "Discrete data",
+  },
+  {
+    question: "Data collected for the first time by the investigator is called",
+    choices: ["Secondary data", "Primary data", "Qualitative data", "Raw data"],
+    answer: "Primary data",
+  },
+  {
+    question: "Which of the following is an example of secondary data?",
+    choices: [
+      "Interview results",
+      "Questionnaire responses",
+      "Census report",
+      "Field observation",
+    ],
+    answer: "Census report",
+  },
+  {
+    question: "One major advantage of secondary data is that it is",
+    choices: ["Always accurate", "Costly", "Time-consuming", "Easily available"],
+    answer: "Easily available",
+  },
+  {
+    question: "A census involves",
+    choices: [
+      "Studying a sample",
+      "Studying part of the population",
+      "Studying the entire population",
+      "Guessing values",
+    ],
+    answer: "Studying the entire population",
+  },
+  {
+    question: "Sampling refers to",
+    choices: [
+      "Studying all items",
+      "Studying a portion of the population",
+      "Data classification",
+      "Data presentation",
+    ],
+    answer: "Studying a portion of the population",
+  },
+  {
+    question: "Which of the following is NOT a method of data collection?",
+    choices: ["Questionnaire", "Interview", "Observation", "Computation"],
+    answer: "Computation",
+  },
+  {
+    question: "The systematic arrangement of data in rows and columns is called",
+    choices: ["Graph", "Table", "Chart", "Histogram"],
+    answer: "Table",
+  },
+  {
+    question: "Which of the following is best for comparing categories?",
+    choices: ["Histogram", "Bar chart", "Ogive", "Frequency polygon"],
+    answer: "Bar chart",
+  },
+  {
+    question: "A pie chart is mainly used to show",
+    choices: [
+      "Frequency distribution",
+      "Trends over time",
+      "Proportions of a whole",
+      "Class intervals",
+    ],
+    answer: "Proportions of a whole",
+  },
+  {
+    question: "A histogram is used for",
+    choices: ["Qualitative data", "Discrete data", "Continuous data", "Raw data"],
+    answer: "Continuous data",
+  },
+  {
+    question: "In a bar chart, the bars are",
+    choices: [
+      "Joined together",
+      "Of unequal width",
+      "Separated by gaps",
+      "Always vertical",
+    ],
+    answer: "Separated by gaps",
+  },
+  {
+    question: "The graph of cumulative frequency is called",
+    choices: ["Histogram", "Ogive", "Bar chart", "Pie chart"],
+    answer: "Ogive",
+  },
+  {
+    question: "Which of the following is NOT a graphical method of data presentation?",
+    choices: ["Table", "Histogram", "Bar chart", "Pie chart"],
+    answer: "Table",
+  },
+  {
+    question: "The horizontal axis of a graph is called",
+    choices: ["Ordinate", "Abscissa", "Origin", "Median axis"],
+    answer: "Abscissa",
+  },
+  {
+    question: "An error is defined as the difference between",
+    choices: [
+      "Two approximations",
+      "Observed value and true value",
+      "Sample and population",
+      "Mean and median",
+    ],
+    answer: "Observed value and true value",
+  },
+  {
+    question: "Errors that occur due to rounding are called",
+    choices: [
+      "Random errors",
+      "Gross errors",
+      "Approximation errors",
+      "Systematic errors",
+    ],
+    answer: "Approximation errors",
+  },
+  {
+    question: "Truncation means",
+    choices: [
+      "Rounding up",
+      "Rounding down by cutting off digits",
+      "Adding digits",
+      "Multiplying values",
+    ],
+    answer: "Rounding down by cutting off digits",
+  },
+  {
+    question: "The absolute error is always",
+    choices: ["Negative", "Positive", "Zero", "Infinite"],
+    answer: "Positive",
+  },
+  {
+    question: "A frequency distribution shows",
+    choices: [
+      "Data collection methods",
+      "Number of times values occur",
+      "Data errors",
+      "Data sources",
+    ],
+    answer: "Number of times values occur",
+  },
+  {
+    question: "The width of a class interval is obtained by",
+    choices: [
+      "Adding class limits",
+      "Subtracting lower limit from upper limit",
+      "Dividing frequency by class",
+      "Multiplying class limits",
+    ],
+    answer: "Subtracting lower limit from upper limit",
+  },
+  {
+    question: "The midpoint of a class is called",
+    choices: ["Class boundary", "Class mark", "Upper limit", "Lower limit"],
+    answer: "Class mark",
+  },
+  {
+    question: "Cumulative frequency is obtained by",
+    choices: [
+      "Adding all frequencies progressively",
+      "Dividing frequencies",
+      "Subtracting frequencies",
+      "Averaging frequencies",
+    ],
+    answer: "Adding all frequencies progressively",
+  },
+  {
+    question: "The arithmetic mean is obtained by",
+    choices: [
+      "Adding all values and dividing by their number",
+      "Multiplying all values",
+      "Choosing the middle value",
+      "Counting frequencies",
+    ],
+    answer: "Adding all values and dividing by their number",
+  },
+  {
+    question: "The median is the value that",
+    choices: [
+      "Occurs most frequently",
+      "Divides data into two equal parts",
+      "Is the average",
+      "Is the largest value",
+    ],
+    answer: "Divides data into two equal parts",
+  },
+  {
+    question: "The mode is the value that",
+    choices: [
+      "Is at the center",
+      "Appears most frequently",
+      "Is the average",
+      "Has highest range",
+    ],
+    answer: "Appears most frequently",
+  },
+  {
+    question: "Quartiles divide data into",
+    choices: ["Two equal parts", "Three equal parts", "Four equal parts", "Five equal parts"],
+    answer: "Four equal parts",
+  },
+  {
+    question: "The second quartile is also known as",
+    choices: ["Mean", "Mode", "Median", "Range"],
+    answer: "Median",
+  },
+  {
+    question: "Percentiles divide data into",
+    choices: ["10 equal parts", "100 equal parts", "4 equal parts", "3 equal parts"],
+    answer: "100 equal parts",
+  },
+  {
+    question: "Dispersion measures the",
+    choices: ["Central value", "Spread of data", "Average", "Shape of data"],
+    answer: "Spread of data",
+  },
+  {
+    question: "The simplest measure of dispersion is",
+    choices: ["Variance", "Standard deviation", "Range", "Mean deviation"],
+    answer: "Range",
+  },
+  {
+    question: "Range is calculated as",
+    choices: [
+      "Minimum – Maximum",
+      "Maximum – Minimum",
+      "Mean – Median",
+      "Mode – Mean",
+    ],
+    answer: "Maximum – Minimum",
+  },
+  {
+    question: "Variance is the square of",
+    choices: ["Mean deviation", "Range", "Standard deviation", "Median"],
+    answer: "Standard deviation",
+  },
+  {
+    question: "Standard deviation is always",
+    choices: ["Negative", "Zero", "Positive or zero", "Infinite"],
+    answer: "Positive or zero",
+  },
+  {
+    question: "A distribution with a long tail to the right is",
+    choices: ["Symmetrical", "Negatively skewed", "Positively skewed", "Uniform"],
+    answer: "Positively skewed",
+  },
+  {
+    question: "In a positively skewed distribution",
+    choices: [
+      "Mean < Median < Mode",
+      "Mode < Median < Mean",
+      "Mean = Median = Mode",
+      "Mean > Median > Mode",
+    ],
+    answer: "Mode < Median < Mean",
+  },
+  {
+    question: "A symmetrical distribution has",
+    choices: [
+      "One tail",
+      "Mean = Median = Mode",
+      "Mean ≠ Median",
+      "No mode",
+    ],
+    answer: "Mean = Median = Mode",
+  },
+  {
+    question: "Kurtosis measures the",
+    choices: ["Central value", "Spread", "Shape or peakedness", "Size of data"],
+    answer: "Shape or peakedness",
+  },
+  {
+    question: "A normal distribution is described as",
+    choices: ["Leptokurtic", "Platykurtic", "Mesokurtic", "Skewed"],
+    answer: "Mesokurtic",
+  },
+  {
+    question: "A ratio is a comparison of",
+    choices: [
+      "Two related quantities",
+      "Two unrelated quantities",
+      "Time differences",
+      "Percentages only",
+    ],
+    answer: "Two related quantities",
+  },
+  {
+    question: "A rate involves comparison of quantities of",
+    choices: ["Same kind", "Different kinds", "Equal values", "Samples only"],
+    answer: "Different kinds",
+  },
+  {
+    question: "Which of the following is an example of a rate?",
+    choices: ["2:3", "5:7", "km per hour", "Male to female"],
+    answer: "km per hour",
+  },
+  {
+    question: "A ratio has",
+    choices: ["Units", "No units", "Time factor", "Percentage sign"],
+    answer: "No units",
+  },
+  {
+    question: "An index number is used to measure",
+    choices: [
+      "Population size",
+      "Change over time",
+      "Central tendency",
+      "Dispersion",
+    ],
+    answer: "Change over time",
+  },
+  {
+    question: "The base year index number is usually taken as",
+    choices: ["10", "50", "100", "1000"],
+    answer: "100",
+  },
+  {
+    question: "Price index numbers measure changes in",
+    choices: ["Population", "Prices", "Wages", "Output"],
+    answer: "Prices",
+  },
+  {
+    question: "Descriptive statistics deals with",
+    choices: [
+      "Drawing conclusions",
+      "Making predictions",
+      "Summarizing data",
+      "Probability",
+    ],
+    answer: "Summarizing data",
+  },
+  {
+    question: "Inferential statistics involves",
+    choices: [
+      "Data collection only",
+      "Data summarization",
+      "Generalization from samples",
+      "Graphs only",
+    ],
+    answer: "Generalization from samples",
+  },
+  {
+    question: "A population refers to",
+    choices: ["Sample size", "Entire group of interest", "Data set", "Frequency"],
+    answer: "Entire group of interest",
+  },
+  {
+    question: "A sample must be",
+    choices: ["Large only", "Small only", "Representative", "Biased"],
+    answer: "Representative",
+  },
+  {
+    question: "Which of the following is NOT a measure of location?",
+    choices: ["Mean", "Median", "Mode", "Range"],
+    answer: "Range",
+  },
+  {
+    question: "Which of the following is NOT a measure of dispersion?",
+    choices: ["Range", "Variance", "Standard deviation", "Median"],
+    answer: "Median",
+  },
+  {
+    question: "Data arranged in ascending or descending order is called",
+    choices: ["Raw data", "Grouped data", "Array", "Series"],
+    answer: "Array",
+  },
+  {
+    question: "The total of all frequencies is equal to",
+    choices: ["Number of classes", "Sample size", "Class width", "Mean"],
+    answer: "Sample size",
+  },
+  {
+    question: "A frequency polygon is obtained by joining",
+    choices: ["Upper limits", "Lower limits", "Class marks", "Frequencies only"],
+    answer: "Class marks",
+  },
+  {
+    question: "Which of the following is TRUE?",
+    choices: [
+      "Mean is always the best average",
+      "Median is affected by extreme values",
+      "Mode may not exist",
+      "Range uses all observations",
+    ],
+    answer: "Mode may not exist",
+  },
+   {
+    question: "Which of the following best describes raw data?",
+    choices: [
+      "Data arranged in tables",
+      "Data that has been summarized",
+      "Data collected but not yet processed",
+      "Data presented graphically",
+    ],
+    answer: "Data collected but not yet processed",
+  },
+  {
+    question: "Quantitative data can be classified into",
+    choices: [
+      "Primary and secondary",
+      "Discrete and continuous",
+      "Qualitative and quantitative",
+      "Grouped and ungrouped",
+    ],
+    answer: "Discrete and continuous",
+  },
+  {
+    question: "Which method of data collection is most suitable for large populations?",
+    choices: ["Interview", "Observation", "Questionnaire", "Experiment"],
+    answer: "Questionnaire",
+  },
+  {
+    question: "A table that shows frequencies for each class is called",
+    choices: [
+      "Simple table",
+      "Frequency table",
+      "Statistical table",
+      "Cumulative table",
+    ],
+    answer: "Frequency table",
+  },
+  {
+    question: "Which chart is most suitable for showing changes over time?",
+    choices: ["Pie chart", "Bar chart", "Line graph", "Histogram"],
+    answer: "Line graph",
+  },
+  {
+    question: "In a frequency table, the sum of relative frequencies is",
+    choices: ["0", "1", "100", "Depends on data"],
+    answer: "1",
+  },
+  {
+    question: "Class limits refer to",
+    choices: [
+      "The boundaries of a class",
+      "The smallest and largest values in a class",
+      "The midpoints of a class",
+      "The frequencies of a class",
+    ],
+    answer: "The smallest and largest values in a class",
+  },
+  {
+    question: "Which of the following is used to correct overlapping class intervals?",
+    choices: ["Class width", "Class mark", "Class boundary", "Frequency"],
+    answer: "Class boundary",
+  },
+  {
+    question: "The cumulative frequency curve is mainly used to determine",
+    choices: ["Mean", "Median", "Mode", "Variance"],
+    answer: "Median",
+  },
+  {
+    question: "Which measure of central tendency is least affected by extreme values?",
+    choices: ["Mean", "Median", "Mode", "Range"],
+    answer: "Median",
+  },
+  {
+    question: "Mean deviation is computed using deviations from the",
+    choices: ["Mean only", "Median only", "Mode only", "Mean or median"],
+    answer: "Mean or median",
+  },
+  {
+    question: "Which measure of dispersion uses all observations in its calculation?",
+    choices: ["Range", "Quartile deviation", "Mean deviation", "Standard deviation"],
+    answer: "Standard deviation",
+  },
+  {
+    question: "Quartile deviation is also known as",
+    choices: [
+      "Interquartile range",
+      "Semi-interquartile range",
+      "Mean deviation",
+      "Range",
+    ],
+    answer: "Semi-interquartile range",
+  },
+  {
+    question: "The coefficient of range is given by",
+    choices: [
+      "(Max + Min) / (Max − Min)",
+      "(Max − Min) / (Max + Min)",
+      "Max / Min",
+      "Min / Max",
+    ],
+    answer: "(Max − Min) / (Max + Min)",
+  },
+  {
+    question: "If mean > median > mode, the distribution is",
+    choices: [
+      "Negatively skewed",
+      "Positively skewed",
+      "Symmetrical",
+      "Uniform",
+    ],
+    answer: "Positively skewed",
+  },
+  {
+    question: "Which measure describes the flatness of a distribution?",
+    choices: ["Skewness", "Dispersion", "Kurtosis", "Range"],
+    answer: "Kurtosis",
+  },
+  {
+    question: "A platykurtic distribution is one that is",
+    choices: ["Highly peaked", "Normally peaked", "Flat-topped", "Skewed"],
+    answer: "Flat-topped",
+  },
+  {
+    question: "The total number of observations in a data set is denoted by",
+    choices: ["k", "f", "n", "x"],
+    answer: "n",
+  },
+  {
+    question: "Which of the following averages can be located graphically?",
+    choices: ["Mean", "Median", "Mode", "Range"],
+    answer: "Median",
+  },
+  {
+    question: "An ogive drawn using less-than cumulative frequencies is called",
+    choices: [
+      "Upper ogive",
+      "Greater-than ogive",
+      "Lower ogive",
+      "Frequency curve",
+    ],
+    answer: "Lower ogive",
+  },
+  {
+    question: "The point where the two ogives intersect gives the",
+    choices: ["Mean", "Median", "Mode", "Range"],
+    answer: "Median",
+  },
+  {
+    question: "Which measure is most suitable for income distribution?",
+    choices: ["Mean", "Median", "Mode", "Range"],
+    answer: "Median",
+  },
+  {
+    question: "A rate is usually expressed",
+    choices: [
+      "Without units",
+      "With time factor",
+      "As a percentage only",
+      "As a fraction only",
+    ],
+    answer: "With time factor",
+  },
+  {
+    question: "Which of the following is NOT an index number?",
+    choices: [
+      "Cost of living index",
+      "Price index",
+      "Quantity index",
+      "Frequency index",
+    ],
+    answer: "Frequency index",
+  },
+  {
+    question: "Laspeyres index uses",
+    choices: [
+      "Current year weights",
+      "Base year weights",
+      "Average weights",
+      "No weights",
+    ],
+    answer: "Base year weights",
+  },
+  {
+    question: "Paasche index uses",
+    choices: [
+      "Base year quantities",
+      "Current year quantities",
+      "Average quantities",
+      "Fixed quantities",
+    ],
+    answer: "Current year quantities",
+  },
+  {
+    question: "An index number greater than 100 indicates",
+    choices: [
+      "No change",
+      "A decrease",
+      "An increase",
+      "An error",
+    ],
+    answer: "An increase",
+  },
+  {
+    question: "Which index measures changes in the standard of living?",
+    choices: [
+      "Price index",
+      "Quantity index",
+      "Cost of living index",
+      "Production index",
+    ],
+    answer: "Cost of living index",
+  },
+  {
+    question: "Relative frequency is calculated as",
+    choices: [
+      "Frequency × 100",
+      "Frequency / total frequency",
+      "Total frequency / frequency",
+      "Frequency + total frequency",
+    ],
+    answer: "Frequency / total frequency",
+  },
+  {
+    question: "Which diagram uses rectangles whose areas represent frequencies?",
+    choices: ["Bar chart", "Histogram", "Pie chart", "Ogive"],
+    answer: "Histogram",
+  },
+  {
+    question: "The mean of grouped data is calculated using",
+    choices: ["Class limits", "Class boundaries", "Class marks", "Frequencies only"],
+    answer: "Class marks",
+  },
+  {
+    question: "A negatively skewed distribution has its tail to the",
+    choices: ["Right", "Left", "Center", "Top"],
+    answer: "Left",
+  },
+ {
+    question: "Which of the following is a measure of position?",
+    choices: ["Variance", "Percentile", "Range", "Standard deviation"],
+    answer: "Percentile",
+  },
+  {
+    question: "Deciles divide a data set into",
+    choices: ["4 parts", "5 parts", "10 parts", "100 parts"],
+    answer: "10 parts",
+  },
+  {
+    question: "The first decile is equivalent to the",
+    choices: ["10th percentile", "25th percentile", "50th percentile", "75th percentile"],
+    answer: "10th percentile",
+  },
+  {
+    question: "Which average is most appropriate for categorical data?",
+    choices: ["Mean", "Median", "Mode", "Standard deviation"],
+    answer: "Mode",
+  },
+  {
+    question: "In statistics, symbols and tables are mainly used for",
+    choices: [
+      "Data manipulation",
+      "Data interpretation",
+      "Data presentation",
+      "Data collection",
+    ],
+    answer: "Data presentation",
+  },
+  {
+    question: "Which of the following best defines descriptive statistics?",
+    choices: [
+      "Making future predictions",
+      "Testing hypotheses",
+      "Summarizing numerical data",
+      "Drawing population conclusions",
+    ],
+    answer: "Summarizing numerical data",
+  },
+],
+    science: [
+      {
+        question: "What planet is known as the Red Planet?",
+        choices: ["Mars", "Venus", "Jupiter", "Neptune"],
+        answer: "Mars",
+      },
+      {
+        question: "Water's chemical formula?",
+        choices: ["H2O", "CO2", "O2", "H2"],
+        answer: "H2O",
+      },
+      {
+        question: "The powerhouse of the cell?",
+        choices: ["Nucleus", "Mitochondria", "Ribosome", "Golgi body"],
+        answer: "Mitochondria",
+      },
+      {
+        question: "Light speed approx?",
+        choices: [
+          "300,000 km/s",
+          "150,000 km/s",
+          "1,000,000 km/s",
+          "30,000 km/s",
+        ],
+        answer: "300,000 km/s",
+      },
+    ],
+    history: [
+      {
+        question: "Who discovered America (commonly credited)?",
+        choices: [
+          "Christopher Columbus",
+          "Vasco da Gama",
+          "Leif Erikson",
+          "Magellan",
+        ],
+        answer: "Christopher Columbus",
+      },
+      {
+        question: "Which year did WW2 end?",
+        choices: ["1945", "1939", "1918", "1950"],
+        answer: "1945",
+      },
+      {
+        question: "The Great Pyramid is in which country?",
+        choices: ["Egypt", "Mexico", "Peru", "Iraq"],
+        answer: "Egypt",
+      },
+      {
+        question: "Which empire was ruled by Julius Caesar?",
+        choices: [
+          "Roman Empire",
+          "Mongol Empire",
+          "Ottoman Empire",
+          "Persian Empire",
+        ],
+        answer: "Roman Empire",
+      },
+    ],
+  };
+
+  /* ---------------------------
+     State variables
+     --------------------------- */
+  let questions = [];
+  let shuffled = [];
+  let currentIndex = 0;
+  let score = 0;
+  let timer = null;
+  let timeLeft = 25; // seconds per question
+  const PER_QUESTION_TIME = 25;
+
+  /* ---------------------------
+     Helpers: localStorage highscore by category
+     --------------------------- */
